@@ -9,6 +9,7 @@ ahash = "0.8.12"
 quickphf = "0.1.0"
 rayon = "1.11.0"
 static_assertions = "1.1.0"
+mimalloc = { version = "0.1.48", default-features = false }
 
 [profile.dev]
 codegen-backend = "cranelift"

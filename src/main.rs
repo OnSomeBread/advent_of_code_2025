@@ -1,4 +1,6 @@
 #![feature(const_trait_impl, const_range)]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[allow(unused_imports)]
 #[macro_use]
@@ -717,7 +719,82 @@ pub fn trash_compactor2(input: &'static str) -> i64 {
     ans
 }
 
+pub fn laboratories(input: &'static str) -> i32 {
+    let mut v = vec![];
+    let mut lines_iter = input.lines();
+    let start = lines_iter.next().map_or_else(
+        || panic!(),
+        |first_line| first_line.chars().position(|x| x == 'S').unwrap(),
+    );
+    lines_iter.next();
+    while let (Some(line), Some(_)) = (lines_iter.next(), lines_iter.next()) {
+        v.push(line.bytes().map(|x| x == b'^').collect::<Vec<bool>>());
+    }
+
+    let mut ans = 0;
+    let mut beams: HashSet<usize, RandomState> = HashSet::default();
+    beams.insert(start);
+    for row in v {
+        let mut beams_to_be_added = vec![];
+        let mut beams_to_be_removed: HashSet<usize, RandomState> = HashSet::default();
+        for (j, &val) in row.iter().enumerate() {
+            if val && beams.contains(&j) {
+                beams_to_be_removed.insert(j);
+                beams_to_be_added.push(j - 1);
+                beams_to_be_added.push(j + 1);
+                ans += 1;
+            }
+        }
+
+        beams.retain(|x| !beams_to_be_removed.contains(x));
+        beams.extend(beams_to_be_added.iter());
+    }
+
+    ans
+}
+
+pub fn laboratories2(input: &'static str) -> i64 {
+    let mut v = vec![];
+    let mut lines_iter = input.lines();
+    let start = lines_iter.next().map_or_else(
+        || panic!(),
+        |first_line| first_line.chars().position(|x| x == 'S').unwrap(),
+    );
+    lines_iter.next();
+    while let (Some(line), Some(_)) = (lines_iter.next(), lines_iter.next()) {
+        v.push(line.bytes().map(|x| x == b'^').collect::<Vec<bool>>());
+    }
+
+    fn dpfn(
+        grid: &[Vec<bool>],
+        i: i32,
+        j: i32,
+        cache: &mut HashMap<(i32, i32), i64, RandomState>,
+    ) -> i64 {
+        if i >= grid.len() as i32 {
+            return 1;
+        }
+        if j < 0 || j >= grid[i as usize].len() as i32 {
+            return 0;
+        }
+
+        if let Some(&ans) = cache.get(&(i, j)) {
+            return ans;
+        }
+
+        let best = if grid[i as usize][j as usize] {
+            dpfn(grid, i + 1, j - 1, cache) + dpfn(grid, i + 1, j + 1, cache)
+        } else {
+            dpfn(grid, i + 1, j, cache)
+        };
+        cache.insert((i, j), best);
+        best
+    }
+
+    dpfn(&v, 0, start as i32, &mut HashMap::default())
+}
+
 fn main() {
-    assert!(trash_compactor2(include_str!("../2025/d6t1.txt")) == 3_263_827);
-    println!("{:?}", trash_compactor2(include_str!("../2025/d6.txt")));
+    assert!(laboratories2(include_str!("../2025/d7t1.txt")) == 40);
+    println!("{:?}", laboratories2(include_str!("../2025/d7.txt")));
 }

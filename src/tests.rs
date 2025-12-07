@@ -67,3 +67,14 @@ fn d6() {
     assert!(trash_compactor2(include_str!("../2025/d6.txt")) == 10_142_723_156_431);
     println!("d6 {:?}", t.elapsed());
 }
+
+#[test]
+fn d7() {
+    let t = std::time::Instant::now();
+    assert!(laboratories(include_str!("../2025/d7t1.txt")) == 21);
+    assert!(laboratories(include_str!("../2025/d7.txt")) == 1533);
+
+    assert!(laboratories2(include_str!("../2025/d7t1.txt")) == 40);
+    assert!(laboratories2(include_str!("../2025/d7.txt")) == 10_733_529_153_890);
+    println!("d7 {:?}", t.elapsed());
+}
