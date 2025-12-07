@@ -1,0 +1,28 @@
+cargo-features = ["trim-paths", "codegen-backend"]
+[package]
+name = "advent_of_code_2025"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ahash = "0.8.12"
+quickphf = "0.1.0"
+rayon = "1.11.0"
+static_assertions = "1.1.0"
+
+[profile.dev]
+codegen-backend = "cranelift"
+
+[dev-dependencies]
+divan = "0.1.21"
+
+[[bench]]
+name = "bench"
+harness = false
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+strip = true
+trim-paths = "all"
