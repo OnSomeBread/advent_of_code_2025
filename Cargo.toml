@@ -5,16 +5,18 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ahash = "0.8.12"
-quickphf = "0.1.0"
-rayon = "1.11.0"
-static_assertions = "1.1.0"
 mimalloc = { version = "0.1.48", default-features = false }
+rayon = "1.11.0"
+ahash = "0.8.12"
+smallvec = "1.15.1"
+#serde = { version = "1.0.228", features = ["derive"] }
+#serde_json = "1.0.145"
 
 [profile.dev]
 codegen-backend = "cranelift"
 
 [dev-dependencies]
+function_name = "0.3.0"
 divan = "0.1.21"
 
 [[bench]]

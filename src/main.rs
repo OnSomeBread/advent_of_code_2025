@@ -2,13 +2,11 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-#[allow(unused_imports)]
-#[macro_use]
-extern crate static_assertions;
-use std::collections::{HashMap, HashSet};
-
+use std::collections::{BinaryHeap, HashMap, HashSet};
 use ahash::RandomState;
 use rayon::prelude::*;
+use smallvec::SmallVec;
+
 mod tests;
 
 pub fn combination_lock_code(input: &'static str) -> i32 {
@@ -169,7 +167,7 @@ pub fn count_invalid_ids(input: &str) -> i64 {
 
             let mut total = 0;
             for num in range.next().unwrap()..=range.next().unwrap() {
-                let str_num: Vec<char> = num.to_string().chars().collect();
+                let str_num: SmallVec<[char; 20]> = num.to_string().chars().collect();
                 let num_len = str_num.len();
                 if num_len.is_multiple_of(2) {
                     let n = num_len / 2;
@@ -192,7 +190,7 @@ pub fn count_invalid_ids2(input: &str) -> i64 {
 
             let mut total = 0;
             for num in range.next().unwrap()..=range.next().unwrap() {
-                let str_num: Vec<char> = num.to_string().chars().collect();
+                let str_num: SmallVec<[char; 20]> = num.to_string().chars().collect();
                 let num_len = str_num.len();
 
                 let mut invalid = false;
@@ -794,7 +792,123 @@ pub fn laboratories2(input: &'static str) -> i64 {
     dpfn(&v, 0, start as i32, &mut HashMap::default())
 }
 
+struct UnionFind {
+    pub uf: Vec<usize>,
+    pub rank: Vec<usize>,
+    pub groups: usize,
+}
+
+impl UnionFind {
+    pub fn new(n: usize) -> Self {
+        Self {
+            uf: (0..n).collect(),
+            rank: vec![1; n],
+            groups: n,
+        }
+    }
+
+    pub fn find_parent(&mut self, mut a: usize) -> usize {
+        while self.uf[a] != a {
+            self.uf[a] = self.uf[self.uf[a]];
+            a = self.uf[a];
+        }
+        a
+    }
+
+    pub fn union_parents(&mut self, a: usize, b: usize) -> bool {
+        let p1 = self.find_parent(a);
+        let p2 = self.find_parent(b);
+        if p1 == p2 {
+            return false;
+        }
+
+        self.groups -= 1;
+
+        if self.rank[p1] > self.rank[p2] {
+            self.uf[p2] = p1;
+            self.rank[p1] += self.rank[p2];
+        } else {
+            self.uf[p1] = p2;
+            self.rank[p2] += self.rank[p1];
+        }
+
+        true
+    }
+}
+
+const fn straight_line_dist(p1: (i32, i32, i32), p2: (i32, i32, i32)) -> i64 {
+    let x = p2.0 as i64 - p1.0 as i64;
+    let y = p2.1 as i64 - p1.1 as i64;
+    let z = p2.2 as i64 - p1.2 as i64;
+    let a = x * x + y * y + z * z;
+
+    (a as u64).isqrt() as i64
+}
+
+pub fn playground(input: &'static str, k: i32) -> i64 {
+    let mut coords = vec![];
+    for line in input.lines() {
+        let p = line
+            .split(',')
+            .map(|x| x.parse::<i32>().unwrap())
+            .collect::<Vec<i32>>();
+
+        coords.push((p[0], p[1], p[2]));
+    }
+
+    let mut shortest_distances = BinaryHeap::new();
+    for (i, &p1) in coords.iter().enumerate() {
+        for (j, &p2) in coords.iter().enumerate().skip(i + 1) {
+            shortest_distances.push((std::cmp::Reverse(straight_line_dist(p1, p2)), (i, j)));
+        }
+    }
+
+    let mut uf = UnionFind::new(coords.len());
+    let mut count = 0;
+    while count < k
+        && let Some((_, (i, j))) = shortest_distances.pop()
+    {
+        uf.union_parents(i, j);
+        count += 1;
+    }
+
+    let mut v = uf.rank;
+    v.sort_unstable();
+    let n = v.len();
+
+    (v[n - 1] * v[n - 2] * v[n - 3]) as i64
+}
+
+pub fn playground2(input: &'static str) -> i64 {
+    let mut coords = vec![];
+    for line in input.lines() {
+        let p = line
+            .split(',')
+            .map(|x| x.parse::<i32>().unwrap())
+            .collect::<Vec<i32>>();
+
+        coords.push((p[0], p[1], p[2]));
+    }
+
+    let mut shortest_distances = BinaryHeap::new();
+    for (i, &p1) in coords.iter().enumerate() {
+        for (j, &p2) in coords.iter().enumerate().skip(i + 1) {
+            shortest_distances.push((std::cmp::Reverse(straight_line_dist(p1, p2)), (i, j)));
+        }
+    }
+
+    let mut uf = UnionFind::new(coords.len());
+    while let Some((_, (i, j))) = shortest_distances.pop() {
+        uf.union_parents(i, j);
+        if uf.groups == 1 {
+            return coords[i].0 as i64 * coords[j].0 as i64;
+        }
+    }
+
+    -1
+}
+
 fn main() {
-    assert!(laboratories2(include_str!("../2025/d7t1.txt")) == 40);
-    println!("{:?}", laboratories2(include_str!("../2025/d7.txt")));
+    assert!(playground2(include_str!("../2025/d8t1.txt")) == 25272);
+    println!("{:?}", playground2(include_str!("../2025/d8.txt")));
 }
