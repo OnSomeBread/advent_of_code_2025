@@ -112,6 +112,18 @@ fn d9() {
     println!("{} {:?}", function_name!(), t.elapsed());
 }
 
+#[test]
+#[named]
+fn d10() {
+    let t = std::time::Instant::now();
+    assert!(factory(include_str!("../2025/d10t1.txt")) == 7);
+    assert!(factory(include_str!("../2025/d10.txt")) == 422);
+
+    //assert!(factory2(include_str!("../2025/d10t1.txt")) == 33);
+    //assert!(factory2(include_str!("../2025/d10.txt")) == 422);
+    println!("{} {:?}", function_name!(), t.elapsed());
+}
+
 proptest! {
     #[test]
     fn test_straight_line_dist(x1 in i32::MIN..=i32::MAX, y1 in i32::MIN..=i32::MAX, z1 in i32::MIN..=i32::MAX, x2 in i32::MIN..=i32::MAX, y2 in i32::MIN..=i32::MAX, z2 in i32::MIN..=i32::MAX) {
