@@ -2,10 +2,11 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use std::collections::{BinaryHeap, HashMap, HashSet};
 use ahash::RandomState;
+use itertools::Itertools;
 use rayon::prelude::*;
 use smallvec::SmallVec;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 mod tests;
 
@@ -837,12 +838,12 @@ impl UnionFind {
 }
 
 const fn straight_line_dist(p1: (i32, i32, i32), p2: (i32, i32, i32)) -> i64 {
-    let x = p2.0 as i64 - p1.0 as i64;
-    let y = p2.1 as i64 - p1.1 as i64;
-    let z = p2.2 as i64 - p1.2 as i64;
+    let x = p2.0 as i128 - p1.0 as i128;
+    let y = p2.1 as i128 - p1.1 as i128;
+    let z = p2.2 as i128 - p1.2 as i128;
     let a = x * x + y * y + z * z;
 
-    (a as u64).isqrt() as i64
+    (a as u128).isqrt() as i64
 }
 
 pub fn playground(input: &'static str, k: i32) -> i64 {
@@ -908,7 +909,62 @@ pub fn playground2(input: &'static str) -> i64 {
     -1
 }
 
+pub fn movie_theater(input: &'static str) -> i64 {
+    let mut tiles = vec![];
+    for line in input.lines() {
+        let mut line_iter = line.split(',');
+        tiles.push((
+            line_iter.next().unwrap().parse::<i32>().unwrap(),
+            line_iter.next().unwrap().parse::<i32>().unwrap(),
+        ));
+    }
+
+    let mut ans = 0;
+    for (i, &(p1x, p1y)) in tiles.iter().enumerate() {
+        for &(p2x, p2y) in tiles.iter().skip(i + 1) {
+            ans = ans.max(((p2x - p1x).abs() + 1) as i64 * ((p2y - p1y).abs() + 1) as i64);
+        }
+    }
+    ans
+}
+
+pub fn movie_theater2(input: &'static str) -> i64 {
+    let mut tiles = vec![];
+    for line in input.lines() {
+        let mut line_iter = line.split(',');
+        tiles.push((
+            line_iter.next().unwrap().parse::<i32>().unwrap(),
+            line_iter.next().unwrap().parse::<i32>().unwrap(),
+        ));
+    }
+
+    let mut edges = vec![];
+    for (&(t1x, t1y), &(t2x, t2y)) in tiles.iter().tuple_windows() {
+        edges.push((t1x.min(t2x), t1y.min(t2y), t1x.max(t2x), t1y.max(t2y)));
+    }
+
+    let ((t1x, t1y), (t2x, t2y)) = (tiles[tiles.len() - 1], tiles[0]);
+    edges.push((t1x.min(t2x), t1y.min(t2y), t1x.max(t2x), t1y.max(t2y)));
+
+    let mut ans = 0;
+    for (i, &(p1x, p1y)) in tiles.iter().enumerate() {
+        for &(p2x, p2y) in tiles.iter().skip(i + 1) {
+            let potential_ans = ((p2x - p1x).abs() + 1) as i64 * ((p2y - p1y).abs() + 1) as i64;
+            if potential_ans <= ans {
+                continue;
+            }
+
+            if !edges.iter().any(|&(esx, esy, elx, ely)| {
+                p1x.min(p2x) < elx && p1y.min(p2y) < ely && p1x.max(p2x) > esx && p1y.max(p2y) > esy
+            }) {
+                ans = ans.max(potential_ans);
+            }
+        }
+    }
+    ans
+}
+
 fn main() {
-    assert!(playground2(include_str!("../2025/d8t1.txt")) == 25272);
-    println!("{:?}", playground2(include_str!("../2025/d8.txt")));
+    assert!(movie_theater2(include_str!("../2025/d9t1.txt")) == 24);
+    println!("{:?}", movie_theater2(include_str!("../2025/d9.txt")));
 }

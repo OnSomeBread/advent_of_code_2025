@@ -9,19 +9,22 @@ mimalloc = { version = "0.1.48", default-features = false }
 rayon = "1.11.0"
 ahash = "0.8.12"
 smallvec = "1.15.1"
+itertools = "0.14.0"
+anyhow = "1.0.100"
 #serde = { version = "1.0.228", features = ["derive"] }
 #serde_json = "1.0.145"
-
-[profile.dev]
-codegen-backend = "cranelift"
 
 [dev-dependencies]
 function_name = "0.3.0"
 divan = "0.1.21"
+proptest = "1.9.0"
 
 [[bench]]
 name = "bench"
 harness = false
+
+[profile.dev]
+codegen-backend = "cranelift"
 
 [profile.release]
 panic = "abort"

@@ -1,5 +1,6 @@
 #![cfg(test)]
 use ::function_name::named;
+use proptest::prelude::*;
 
 use crate::*;
 #[test]
@@ -97,4 +98,23 @@ fn d8() {
     assert!(playground2(include_str!("../2025/d8t1.txt")) == 25272);
     assert!(playground2(include_str!("../2025/d8.txt")) == 4_884_971_896);
     println!("{} {:?}", function_name!(), t.elapsed());
+}
+
+#[test]
+#[named]
+fn d9() {
+    let t = std::time::Instant::now();
+    assert!(movie_theater(include_str!("../2025/d9t1.txt")) == 50);
+    assert!(movie_theater(include_str!("../2025/d9.txt")) == 4_781_235_324);
+
+    assert!(movie_theater2(include_str!("../2025/d9t1.txt")) == 24);
+    assert!(movie_theater2(include_str!("../2025/d9.txt")) == 1_566_935_900);
+    println!("{} {:?}", function_name!(), t.elapsed());
+}
+
+proptest! {
+    #[test]
+    fn test_straight_line_dist(x1 in i32::MIN..=i32::MAX, y1 in i32::MIN..=i32::MAX, z1 in i32::MIN..=i32::MAX, x2 in i32::MIN..=i32::MAX, y2 in i32::MIN..=i32::MAX, z2 in i32::MIN..=i32::MAX) {
+        prop_assert!(straight_line_dist((x1, y1, z1), (x2, y2, z2)) >= 0);
+    }
 }
