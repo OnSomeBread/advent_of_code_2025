@@ -128,9 +128,47 @@ fn d10() {
     println!("{} {:?}", function_name!(), t.elapsed());
 }
 
+#[test]
+#[named]
+fn d11() {
+    let t = std::time::Instant::now();
+    assert!(reactor(include_str!("../inputs/d11t1.txt")) == 5);
+    assert!(reactor(include_str!("../inputs/d11.txt")) == 613);
+
+    assert!(reactor2(include_str!("../inputs/d11t2.txt")) == 2);
+    assert!(reactor2(include_str!("../inputs/d11.txt")) == 372_918_445_876_116);
+    println!("{} {:?}", function_name!(), t.elapsed());
+}
+
 proptest! {
     #[test]
     fn test_straight_line_dist((x1, y1, z1) in (i32::MIN..=i32::MAX, i32::MIN..=i32::MAX, i32::MIN..=i32::MAX), (x2, y2, z2) in (i32::MIN..=i32::MAX, i32::MIN..=i32::MAX, i32::MIN..=i32::MAX)) {
         prop_assert!(straight_line_dist((x1, y1, z1), (x2, y2, z2)) >= 0);
+    }
+
+    #[test]
+    fn test_str_to_u32_uniqueness(i1 in "[a-z]{3}", i2 in "[a-z]{3}") {
+        prop_assume!(i1 != i2);
+
+        let a1 = str_to_u32(&i1);
+        let a2 = str_to_u32(&i2);
+        let a3 = str_to_u32(&i1.to_ascii_uppercase());
+
+        prop_assert!(a1 != a2);
+        prop_assert!(a1 != a3);
+
+        prop_assert!(a1 < 1 << 24);
+        prop_assert!(a2 < 1 << 24);
+        prop_assert!(a3 < 1 << 24);
+    }
+
+    #[test]
+    fn test_str_to_u8_uniqueness(i1 in "[a-z]{3}", i2 in "[a-z]{3}") {
+        prop_assume!(i1 != i2);
+
+        let a1 = str_to_u16(&i1);
+        let a2 = str_to_u16(&i2);
+
+        prop_assert!(a1 != a2);
     }
 }

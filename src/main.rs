@@ -2,11 +2,12 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use ahash::RandomState;
+use ahash::{AHashMap, AHashSet};
 use itertools::Itertools;
 use rayon::prelude::*;
 use smallvec::SmallVec;
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::BinaryHeap;
+use tracing::info;
 
 mod tests;
 
@@ -134,7 +135,7 @@ pub fn lobby(input: &'static str) -> i32 {
 
 // DAY 3 PART 2 SLOW SOLUTION
 pub fn lobby2_top_down(input: &'static str) -> i64 {
-    fn dp(nums: &Vec<i32>, i: usize, count: i32, cache: &mut HashMap<(usize, i32), i64>) -> i64 {
+    fn dp(nums: &Vec<i32>, i: usize, count: i32, cache: &mut AHashMap<(usize, i32), i64>) -> i64 {
         if count == 12 {
             return 0;
         }
@@ -165,7 +166,7 @@ pub fn lobby2_top_down(input: &'static str) -> i64 {
                 .map(|x| x.to_digit(10).unwrap() as i32)
                 .collect();
 
-            dp(&nums, 0, 0, &mut HashMap::new())
+            dp(&nums, 0, 0, &mut AHashMap::new())
         })
         .sum()
 }
@@ -492,11 +493,11 @@ pub fn laboratories(input: &'static str) -> i32 {
     let (start, grid) = create_grid_and_start(input);
 
     let mut ans = 0;
-    let mut beams: HashSet<usize, RandomState> = HashSet::default();
+    let mut beams = AHashSet::new();
     beams.insert(start);
     for row in grid {
         let mut beams_to_be_added = vec![];
-        let mut beams_to_be_removed: HashSet<usize, RandomState> = HashSet::default();
+        let mut beams_to_be_removed = AHashSet::new();
         for (j, &val) in row.iter().enumerate() {
             if val && beams.contains(&j) {
                 beams_to_be_removed.insert(j);
@@ -517,12 +518,7 @@ pub fn laboratories(input: &'static str) -> i32 {
 pub fn laboratories2(input: &'static str) -> i64 {
     let (start, grid) = create_grid_and_start(input);
 
-    fn dpfn(
-        grid: &[Vec<bool>],
-        i: i32,
-        j: i32,
-        cache: &mut HashMap<(i32, i32), i64, RandomState>,
-    ) -> i64 {
+    fn dpfn(grid: &[Vec<bool>], i: i32, j: i32, cache: &mut AHashMap<(i32, i32), i64>) -> i64 {
         if i >= grid.len() as i32 {
             return 1;
         }
@@ -543,7 +539,7 @@ pub fn laboratories2(input: &'static str) -> i64 {
         best
     }
 
-    dpfn(&grid, 0, start as i32, &mut HashMap::default())
+    dpfn(&grid, 0, start as i32, &mut AHashMap::new())
 }
 
 pub struct UnionFind {
@@ -779,7 +775,188 @@ pub fn factory(input: &'static str) -> u16 {
     ans
 }
 
+// // DAY 10 PART 2
+// pub fn factory2(input: &'static str) -> u16 {
+//     let mut buttons = vec![];
+//     let mut requirements = vec![];
+//     for line in input.lines() {
+//         let mut parts = line.split_ascii_whitespace();
+//         parts.next();
+
+//         let mut btns = vec![];
+//         let remaining: Vec<&str> = parts.collect();
+//         for section in remaining.iter().take(remaining.len() - 1) {
+//             let s: Vec<char> = section.chars().collect();
+//             let s: String = s[1..s.len() - 1].iter().collect();
+//             btns.push(
+//                 s.split(',')
+//                     .fold(0u16, |acc, x| acc | (1 << x.parse::<u16>().unwrap())),
+//             );
+//         }
+//         buttons.push(btns);
+
+//         let s: Vec<char> = remaining.last().unwrap().chars().collect();
+//         let s: String = s[1..s.len() - 1].iter().collect();
+//         requirements.push(
+//             s.split(',')
+//                 .map(|x| x.parse::<u16>().unwrap())
+//                 .collect::<Vec<u16>>(),
+//         );
+//     }
+
+//     let mut ans = 0;
+//     for (reqs, btns) in requirements.iter().zip(buttons.iter()) {
+//         // add a visited memo to cut paths
+//         ans += 1; //factory_dfs(btns, target);
+//     }
+
+//     ans
+// }
+
+#[allow(dead_code)]
+const fn str_to_u32(s: &str) -> u32 {
+    assert!(s.len() <= 4);
+    let v = s.as_bytes();
+    let mut ans = 0;
+    let mut i = 0;
+    while i < v.len() {
+        ans |= (v[i] as u32) << (i * 8);
+        i += 1;
+    }
+    ans
+}
+
+const fn str_to_u16(s: &str) -> u16 {
+    assert!(s.len() <= 3);
+    let v = s.as_bytes();
+    //assert!(v.iter().all(u8::is_ascii_lowercase));
+
+    let mut ans = 0;
+    let mut i = 0;
+    while i < v.len() as u8 {
+        ans = ans * 26 + (v[i as usize] - b'a') as u16;
+        i += 1;
+    }
+    ans
+}
+
+fn create_adj_list(input: &'static str) -> AHashMap<u16, SmallVec<[u16; 21]>> {
+    // run without smallvec and get largest size to set as smallvec size
+    let mut adj_list: AHashMap<u16, SmallVec<[u16; 21]>> = AHashMap::new();
+    for line in input.lines() {
+        let mut lines_iter = line.split(':');
+        let key = lines_iter.next().unwrap();
+        let mut values = vec![];
+        for value in lines_iter.next().unwrap().split_whitespace() {
+            values.push(str_to_u16(value));
+        }
+
+        adj_list
+            .entry(str_to_u16(key))
+            .or_default()
+            .extend(values.into_iter());
+    }
+    adj_list
+}
+
+// DAY 11 PART 1
+pub fn reactor(input: &'static str) -> i32 {
+    let adj_list = create_adj_list(input);
+
+    fn dp(
+        adj_list: &AHashMap<u16, SmallVec<[u16; 21]>>,
+        output: u16,
+        val: u16,
+        cache: &mut AHashMap<u16, i32>,
+    ) -> i32 {
+        if val == output {
+            return 1;
+        }
+
+        if let Some(&ans) = cache.get(&val) {
+            return ans;
+        }
+
+        let mut ans = 0;
+        for &adj in &adj_list[&val] {
+            ans += dp(adj_list, output, adj, cache);
+        }
+
+        cache.insert(val, ans);
+        ans
+    }
+
+    dp(
+        &adj_list,
+        str_to_u16("out"),
+        str_to_u16("you"),
+        &mut AHashMap::new(),
+    )
+}
+
+// DAY 11 PART 2
+pub fn reactor2(input: &'static str) -> i64 {
+    let adj_list = create_adj_list(input);
+
+    #[allow(clippy::too_many_arguments)]
+    fn dp(
+        adj_list: &AHashMap<u16, SmallVec<[u16; 21]>>,
+        output: u16,
+        v1: u16,
+        v2: u16,
+        val: u16,
+        has_v1: bool,
+        has_v2: bool,
+        cache: &mut AHashMap<(u16, bool, bool), i64>,
+    ) -> i64 {
+        if val == output {
+            if has_v1 && has_v2 {
+                return 1;
+            }
+            return 0;
+        }
+
+        if let Some(&ans) = cache.get(&(val, has_v1, has_v2)) {
+            return ans;
+        }
+
+        let mut ans = 0;
+        for &adj in &adj_list[&val] {
+            ans += dp(
+                adj_list,
+                output,
+                v1,
+                v2,
+                adj,
+                has_v1 || val == v1,
+                has_v2 || val == v2,
+                cache,
+            );
+        }
+
+        cache.insert((val, has_v1, has_v2), ans);
+        ans
+    }
+
+    dp(
+        &adj_list,
+        str_to_u16("out"),
+        str_to_u16("dac"),
+        str_to_u16("fft"),
+        str_to_u16("svr"),
+        false,
+        false,
+        &mut AHashMap::new(),
+    )
+}
+
 fn main() {
-    assert!(factory(include_str!("../inputs/d10t1.txt")) == 7);
-    println!("{:?}", factory(include_str!("../inputs/d10.txt")));
+    let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
+    tracing_subscriber::fmt()
+        .with_writer(non_blocking)
+        .without_time()
+        .init();
+
+    assert!(reactor2(include_str!("../inputs/d11t2.txt")) == 2);
+    info!("{:?}", reactor2(include_str!("../inputs/d11.txt")));
 }
