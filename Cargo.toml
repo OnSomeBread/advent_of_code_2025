@@ -10,8 +10,8 @@ rayon = "1.11.0"
 ahash = "0.8.12"
 smallvec = "1.15.1"
 itertools = "0.14.0"
-anyhow = "1.0.100"
-dashmap = { version = "6.1.0", features = ["rayon"] }
+#anyhow = "1.0.100"
+#dashmap = { version = "6.1.0", features = ["rayon"] }
 #serde = { version = "1.0.228", features = ["derive"] }
 #serde_json = "1.0.145"
 

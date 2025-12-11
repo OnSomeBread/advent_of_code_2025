@@ -4,33 +4,35 @@ fn main() {
     divan::main();
 }
 
-const N: usize = 12;
+const INPUT: &str = include_str!("../inputs/d8.txt");
 
-#[divan::bench(args=[""])]
-fn largest_num(line: &str) -> i64 {
-    let nums: Vec<i64> = line.bytes().rev().map(|x| (x - b'0') as i64).collect();
-    let m = nums.len();
+#[divan::bench()]
+fn create_coords() -> Vec<(i32, i32, i32)> {
+    INPUT
+        .lines()
+        .map(|line| {
+            let p = line
+                .split(',')
+                .map(|x| x.parse::<i32>().unwrap())
+                .collect::<Vec<i32>>();
 
-    let mut dpi1 = [i64::MIN >> 5; N + 1];
-    dpi1[N] = 0;
-
-    for i in (0..m).rev() {
-        let mut dp = [0; N + 1];
-
-        for j in (0..N).rev() {
-            dp[j] = dpi1[j].max(dpi1[j + 1] * 10 + nums[i]);
-        }
-        dpi1 = dp;
-    }
-
-    dpi1[0]
+            (p[0], p[1], p[2])
+        })
+        .collect()
 }
 
 #[divan::bench()]
-pub fn lobby2() -> i64 {
-    include_str!("../2025/d3.txt")
+fn create_coords_par() -> Vec<(i32, i32, i32)> {
+    INPUT
         .lines()
         .par_bridge()
-        .map(largest_num)
-        .sum()
+        .map(|line| {
+            let p = line
+                .split(',')
+                .map(|x| x.parse::<i32>().unwrap())
+                .collect::<Vec<i32>>();
+
+            (p[0], p[1], p[2])
+        })
+        .collect()
 }

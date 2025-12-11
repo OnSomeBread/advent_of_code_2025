@@ -3,8 +3,6 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use ahash::RandomState;
-#[allow(unused_imports)]
-use anyhow::Result;
 use itertools::Itertools;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -12,7 +10,26 @@ use std::collections::{BinaryHeap, HashMap, HashSet};
 
 mod tests;
 
-pub fn combination_lock_code(input: &'static str) -> i32 {
+// DAY 1 PART 1
+pub fn secret_entrance(input: &'static str) -> i32 {
+    let mut curr: i32 = 50;
+    let mut ans = 0;
+
+    for turn in input.lines() {
+        let mut letters_iter = turn.chars();
+        let l0 = letters_iter.next().unwrap();
+        let amt = letters_iter.collect::<String>().parse::<i32>().unwrap();
+
+        curr = (curr + if l0 == 'R' { amt } else { -amt }).rem_euclid(100);
+        if curr == 0 {
+            ans += 1;
+        }
+    }
+    ans
+}
+
+// DAY 1 PART 2
+pub fn secret_entrance2(input: &'static str) -> i32 {
     let mut curr: i32 = 50;
     let mut lands_on = [0; 100];
     for turn in input.lines() {
@@ -33,135 +50,8 @@ pub fn combination_lock_code(input: &'static str) -> i32 {
     lands_on[0]
 }
 
-pub fn pair_lists(input: &str) -> i32 {
-    let mut list1 = vec![];
-    let mut list2 = HashMap::new();
-    for line in input.lines() {
-        let nums: Vec<&str> = line.split_whitespace().collect();
-        list1.push(nums[0].parse::<i32>().unwrap());
-        *list2.entry(nums[1].parse::<i32>().unwrap()).or_insert(0) += 1;
-    }
-
-    let mut ans = 0;
-    for num in list1 {
-        if let Some(&val) = list2.get(&num) {
-            ans += num * val;
-        }
-    }
-    ans
-}
-
-pub fn corrupted_memory(input: &str) -> i32 {
-    let mut ans = 0;
-    let mut handle_mul = |mul: &str| {
-        if let Some(vals) = mul.split(')').collect::<Vec<&str>>().first() {
-            let nums = vals.split(',').collect::<Vec<&str>>();
-            if let Some(n1) = nums.first()
-                && let Some(n2) = nums.get(1)
-                && let Ok(v1) = n1.parse::<i32>()
-                && let Ok(v2) = n2.parse::<i32>()
-            {
-                ans += v1 * v2;
-            }
-        }
-    };
-    for fn_do in input.split("do()").skip(1) {
-        let muls = fn_do.split("mul(").collect::<Vec<&str>>();
-        if muls[0].contains("don't()") {
-            continue;
-        }
-        let mut next = true;
-        for mul in muls {
-            if !next {
-                break;
-            }
-            if mul.contains("don't()") {
-                next = false;
-            }
-            handle_mul(mul);
-        }
-    }
-
-    if let Some(mul) = input.split("mul(").collect::<Vec<&str>>().get(1) {
-        handle_mul(mul);
-    }
-
-    ans
-}
-
-const DIRS_8: [(i32, i32); 8] = [
-    (1, 0),
-    (-1, 0),
-    (0, 1),
-    (0, -1),
-    (1, 1),
-    (-1, -1),
-    (-1, 1),
-    (1, -1),
-];
-
-pub fn count_xmas(input: &str) -> i32 {
-    let mut grid = vec![];
-    for line in input.lines() {
-        grid.push(line.chars().collect::<Vec<char>>());
-    }
-
-    let m = grid.len();
-    let n = grid[0].len();
-    let xmas = ['X', 'M', 'A', 'S'];
-    let mut ans = 0;
-    for i in 0..m {
-        for j in 0..n {
-            for (di, dj) in DIRS_8 {
-                let mut found = true;
-                for k in 0..4 {
-                    let (ni, nj) = (i as i32 + di * k, j as i32 + dj * k);
-                    if (0..m as i32).contains(&ni)
-                        && (0..n as i32).contains(&nj)
-                        && grid[ni as usize][nj as usize] == xmas[k as usize]
-                    {
-                        continue;
-                    }
-                    found = false;
-                    break;
-                }
-                if found {
-                    ans += 1;
-                }
-            }
-        }
-    }
-
-    ans
-}
-
-pub fn count_xmas2(input: &str) -> i32 {
-    let mut grid = vec![];
-    for line in input.lines() {
-        grid.push(line.chars().collect::<Vec<char>>());
-    }
-
-    let m = grid.len();
-    let n = grid[0].len();
-    let mas = ['M', 'A', 'S'];
-    let sam = ['S', 'A', 'M'];
-
-    let mut ans = 0;
-    for i in 1..m - 1 {
-        for j in 1..n - 1 {
-            let pos = [grid[i - 1][j - 1], grid[i][j], grid[i + 1][j + 1]];
-            let neg = [grid[i + 1][j - 1], grid[i][j], grid[i - 1][j + 1]];
-
-            if (pos == sam || pos == mas) && (neg == sam || neg == mas) {
-                ans += 1;
-            }
-        }
-    }
-
-    ans
-}
-
-pub fn count_invalid_ids(input: &str) -> i64 {
+// DAY 2 PART 1
+pub fn gift_shop(input: &'static str) -> i64 {
     input
         .split(',')
         .par_bridge()
@@ -184,7 +74,8 @@ pub fn count_invalid_ids(input: &str) -> i64 {
         .sum()
 }
 
-pub fn count_invalid_ids2(input: &str) -> i64 {
+// DAY 2 PART 2
+pub fn gift_shop2(input: &'static str) -> i64 {
     input
         .split(',')
         .par_bridge()
@@ -219,193 +110,30 @@ pub fn count_invalid_ids2(input: &str) -> i64 {
         .sum()
 }
 
-pub fn print_queue(input: &str) -> i32 {
-    let parts: Vec<&str> = input.split("\r\n\r\n").collect();
-    let (p1, p2) = (parts[0], parts[1]);
-    let mut comes_before: HashMap<i32, HashSet<i32, RandomState>, RandomState> = HashMap::default();
-    for line in p1.lines() {
-        let s: Vec<&str> = line.split('|').collect();
-        let (n1, n2) = (s[0].parse::<i32>().unwrap(), s[1].parse::<i32>().unwrap());
-        comes_before.entry(n1).or_default().insert(n2);
-    }
-
-    let mut ans = 0;
-    for line in p2.lines() {
-        let nums: Vec<i32> = line.split(',').map(|x| x.parse::<i32>().unwrap()).collect();
-        let mut all = true;
-        let mut found: HashSet<i32, RandomState> = HashSet::default();
-        for &num in &nums {
-            if let Some(hs) = comes_before.get(&num)
-                && found.intersection(hs).next().is_some()
-            {
-                all = false;
-                break;
+// DAY 3 PART 1
+pub fn lobby(input: &'static str) -> i32 {
+    input
+        .lines()
+        .par_bridge()
+        .map(|line| {
+            let mut largest = i32::MIN / 100;
+            let mut best = 0;
+            for digit_char in line.chars() {
+                if let Some(digit) = digit_char.to_digit(10) {
+                    best = best.max(largest * 10 + digit as i32);
+                    largest = largest.max(digit as i32);
+                }
             }
-
-            found.insert(num);
-        }
-        if all {
-            ans += nums[nums.len() / 2];
-        }
-    }
-    ans
+            if largest == i32::MIN / 100 {
+                return 0;
+            }
+            best
+        })
+        .sum()
 }
 
-// pub fn print_queue2(input: &str) -> i32 {
-//     let parts: Vec<&str> = input.split("\r\n\r\n").collect();
-//     let (p1, p2) = (parts[0], parts[1]);
-//     let mut adj_list: HashMap<
-//         i32,
-//         (HashSet<i32, RandomState>, HashSet<i32, RandomState>),
-//         RandomState,
-//     > = HashMap::default();
-//     for line in p1.lines() {
-//         let s: Vec<&str> = line.split('|').collect();
-//         let (n1, n2) = (s[0].parse::<i32>().unwrap(), s[1].parse::<i32>().unwrap());
-//         adj_list.entry(n2).or_default().0.insert(n1);
-//         adj_list.entry(n1).or_default().1.insert(n2);
-//     }
-
-//     let mut bad_nums = vec![];
-//     for line in p2.lines() {
-//         let nums: Vec<i32> = line.split(',').map(|x| x.parse::<i32>().unwrap()).collect();
-//         let mut all = true;
-//         let mut found: HashSet<i32, RandomState> = HashSet::default();
-//         for &num in &nums {
-//             if let Some((_, after)) = adj_list.get(&num)
-//                 && found.intersection(after).next().is_some()
-//             {
-//                 all = false;
-//                 break;
-//             }
-
-//             found.insert(num);
-//         }
-//         if !all {
-//             bad_nums.push(nums);
-//         }
-//     }
-//     let mut ans = 0;
-
-//     for mut nums in bad_nums {
-//         let mut visited: HashSet<i32, RandomState> = HashSet::default();
-//         let mut st = nums[0];
-
-//     }
-//     ans
-// }
-
-pub fn count_distinct_positions(input: &str) -> i32 {
-    let mut map = vec![];
-    let mut curr: (i32, i32) = (0, 0);
-
-    let mut dir_idx = 0;
-    let dirs = ['^', '>', 'v', '<'];
-    let dirs_hm: HashMap<char, (i32, i32)> =
-        HashMap::from([('v', (1, 0)), ('>', (0, 1)), ('<', (0, -1)), ('^', (-1, 0))]);
-    for (r, line) in input.lines().enumerate() {
-        let mut row = vec![];
-        for (c, val) in line.chars().enumerate() {
-            if val == '.' {
-                row.push(false);
-            } else if val == '#' {
-                row.push(true);
-            } else if dirs_hm.contains_key(&val) {
-                curr = (r as i32, c as i32);
-                dir_idx = dirs.iter().position(|x| *x == val).unwrap();
-                row.push(false);
-            }
-        }
-        map.push(row);
-    }
-
-    let mut visited: HashSet<(i32, i32), RandomState> = HashSet::default();
-    let m = map.len();
-    let n = map[0].len();
-    let in_bounds = |test: (i32, i32)| -> bool {
-        (0..m as i32).contains(&test.0) && (0..n as i32).contains(&test.1)
-    };
-    let add_tuple = |t1: (i32, i32), t2: (i32, i32)| -> (i32, i32) { (t1.0 + t2.0, t1.1 + t2.1) };
-    while in_bounds(curr) {
-        visited.insert((curr.0, curr.1));
-        let mut next = add_tuple(curr, dirs_hm[&dirs[dir_idx]]);
-        while in_bounds(next) && map[next.0 as usize][next.1 as usize] {
-            dir_idx = (dir_idx + 1) % dirs.len();
-            next = add_tuple(curr, dirs_hm[&dirs[dir_idx]]);
-        }
-        curr = next;
-    }
-
-    visited.len() as i32
-}
-
-pub fn count_distinct_positions2(input: &str) -> i32 {
-    let mut map = vec![];
-    let mut curr: (i32, i32) = (0, 0);
-
-    let mut dir_idx = 0;
-    let dirs = ['^', '>', 'v', '<'];
-    let dirs_hm: HashMap<char, (i32, i32)> =
-        HashMap::from([('v', (1, 0)), ('>', (0, 1)), ('<', (0, -1)), ('^', (-1, 0))]);
-    for (r, line) in input.lines().enumerate() {
-        let mut row = vec![];
-        for (c, val) in line.chars().enumerate() {
-            if val == '.' {
-                row.push(false);
-            } else if val == '#' {
-                row.push(true);
-            } else if dirs_hm.contains_key(&val) {
-                curr = (r as i32, c as i32);
-                dir_idx = dirs.iter().position(|x| *x == val).unwrap();
-                row.push(false);
-            }
-        }
-        map.push(row);
-    }
-
-    let mut visited: HashMap<(i32, i32), [bool; 4], RandomState> = HashMap::default();
-    let m = map.len();
-    let n = map[0].len();
-    let in_bounds = |test: (i32, i32)| -> bool {
-        (0..m as i32).contains(&test.0) && (0..n as i32).contains(&test.1)
-    };
-    let add_tuple = |t1: (i32, i32), t2: (i32, i32)| -> (i32, i32) { (t1.0 + t2.0, t1.1 + t2.1) };
-    let mut ans = 0;
-    while in_bounds(curr) {
-        if visited.entry(curr).or_default()[dir_idx] {
-            ans += 1;
-        }
-        let mut next = add_tuple(curr, dirs_hm[&dirs[dir_idx]]);
-        while in_bounds(next) && map[next.0 as usize][next.1 as usize] {
-            dir_idx = (dir_idx + 1) % dirs.len();
-            next = add_tuple(curr, dirs_hm[&dirs[dir_idx]]);
-        }
-        curr = next;
-    }
-
-    ans
-}
-
-pub fn lobby(input: &str) -> i32 {
-    let mut ans = 0;
-    for line in input.lines() {
-        let mut largest = i32::MIN / 100;
-        let mut best = 0;
-        for digit_char in line.chars() {
-            if let Some(digit) = digit_char.to_digit(10) {
-                best = best.max(largest * 10 + digit as i32);
-                largest = largest.max(digit as i32);
-            }
-        }
-        if largest == i32::MIN / 100 {
-            continue;
-        }
-        ans += best;
-    }
-    ans
-}
-
-pub fn lobby2_top_down(input: &str) -> i64 {
+// DAY 3 PART 2 SLOW SOLUTION
+pub fn lobby2_top_down(input: &'static str) -> i64 {
     fn dp(nums: &Vec<i32>, i: usize, count: i32, cache: &mut HashMap<(usize, i32), i64>) -> i64 {
         if count == 12 {
             return 0;
@@ -442,7 +170,8 @@ pub fn lobby2_top_down(input: &str) -> i64 {
         .sum()
 }
 
-pub fn lobby2(input: &str) -> i64 {
+// DAY 3 PART 2
+pub fn lobby2(input: &'static str) -> i64 {
     const N: usize = 12;
 
     input
@@ -473,7 +202,19 @@ const fn in_bounds(i: i32, j: i32, m: usize, n: usize) -> bool {
     (0..m as i32).contains(&i) && (0..n as i32).contains(&j)
 }
 
-pub fn printing_department(input: &str) -> i32 {
+const DIRS_8: [(i32, i32); 8] = [
+    (1, 0),
+    (-1, 0),
+    (0, 1),
+    (0, -1),
+    (1, 1),
+    (-1, -1),
+    (-1, 1),
+    (1, -1),
+];
+
+// DAY 4 PART 1
+pub fn printing_department(input: &'static str) -> i32 {
     let map: Vec<Vec<bool>> = input
         .lines()
         .map(|line| line.bytes().map(|x| x == b'@').collect())
@@ -505,7 +246,8 @@ pub fn printing_department(input: &str) -> i32 {
     ans
 }
 
-pub fn printing_department2(input: &str) -> i32 {
+// DAY 4 PART 2
+pub fn printing_department2(input: &'static str) -> i32 {
     let mut map: Vec<Vec<bool>> = input
         .lines()
         .map(|line| line.bytes().map(|x| x == b'@').collect())
@@ -556,13 +298,13 @@ const fn cafe_order((start, end): (i64, i64), id: i64) -> std::cmp::Ordering {
     }
 }
 
-pub fn cafeteria(input: &str) -> i32 {
+// DAY 5 PART 1
+pub fn cafeteria(input: &'static str) -> i32 {
     let mut parts = input.split("\r\n\r\n");
     let mut pre_intervals: Vec<(i64, i64)> = parts
         .next()
         .unwrap()
         .lines()
-        .par_bridge()
         .map(|line| {
             let mut range = line.split('-').map(|x| x.parse::<i64>().unwrap());
             (range.next().unwrap(), range.next().unwrap())
@@ -593,13 +335,13 @@ pub fn cafeteria(input: &str) -> i32 {
         .sum()
 }
 
+// DAY 5 PART 2
 pub fn cafeteria2(input: &'static str) -> i64 {
     let mut parts = input.split("\r\n\r\n");
     let mut pre_intervals: Vec<(i64, i64)> = parts
         .next()
         .unwrap()
         .lines()
-        .par_bridge()
         .map(|line| {
             let mut range = line.split('-').map(|x| x.parse::<i64>().unwrap());
             (range.next().unwrap(), range.next().unwrap())
@@ -619,26 +361,32 @@ pub fn cafeteria2(input: &'static str) -> i64 {
 
     intervals
         .par_iter()
-        .map(|(start, end)| end - start + 1)
+        .chunks(1000)
+        .map(|chunk| {
+            chunk
+                .iter()
+                .map(|(start, end)| end - start + 1)
+                .sum::<i64>()
+        })
         .sum()
 }
 
+// DAY 6 PART 1
 pub fn trash_compactor(input: &'static str) -> i64 {
-    let mut values: Vec<Vec<i64>> = vec![];
-
     let mut all_ops = vec![];
-    if let Some(ops) = input.lines().last() {
-        for op in ops.split_whitespace() {
-            all_ops.push(op.chars().next().unwrap());
-        }
+    for op in input.lines().last().unwrap().split_whitespace() {
+        all_ops.push(op.chars().next().unwrap());
     }
-    for line in input.lines() {
-        values.push(
+
+    let mut values: Vec<Vec<i64>> = input
+        .lines()
+        .map(|line| {
             line.split_whitespace()
                 .filter_map(|x| x.parse::<i64>().ok())
-                .collect(),
-        );
-    }
+                .collect()
+        })
+        .collect();
+
     values.pop();
 
     let m = values.len();
@@ -661,6 +409,7 @@ pub fn trash_compactor(input: &'static str) -> i64 {
     ans
 }
 
+// DAY 6 PART 2
 pub fn trash_compactor2(input: &'static str) -> i64 {
     let mut all_chars: Vec<Vec<char>> = input
         .lines()
@@ -669,25 +418,21 @@ pub fn trash_compactor2(input: &'static str) -> i64 {
     all_chars.pop();
 
     let mut all_ops = vec![];
-    if let Some(ops) = input.lines().last() {
-        for op in ops.split_whitespace() {
-            all_ops.push(op.chars().next().unwrap());
-        }
+    for op in input.lines().last().unwrap().split_whitespace() {
+        all_ops.push(op.chars().next().unwrap());
     }
 
     let mut count_spaces = vec![];
-    if let Some(part) = input.lines().last() {
-        let mut count = 0;
-        for letter in part.chars().skip(1) {
-            if letter == ' ' {
-                count += 1;
-            } else {
-                count_spaces.push(count);
-                count = 0;
-            }
+    let mut count = 0;
+    for letter in input.lines().last().unwrap().chars().skip(1) {
+        if letter == ' ' {
+            count += 1;
+        } else {
+            count_spaces.push(count);
+            count = 0;
         }
-        count_spaces.push(count);
     }
+    count_spaces.push(count);
 
     let n = count_spaces.len();
     count_spaces[n - 1] += 1;
@@ -720,22 +465,36 @@ pub fn trash_compactor2(input: &'static str) -> i64 {
     ans
 }
 
-pub fn laboratories(input: &'static str) -> i32 {
-    let mut v = vec![];
+// helper for laboratories input
+fn create_grid_and_start(input: &'static str) -> (usize, Vec<Vec<bool>>) {
     let mut lines_iter = input.lines();
-    let start = lines_iter.next().map_or_else(
-        || panic!(),
-        |first_line| first_line.chars().position(|x| x == 'S').unwrap(),
-    );
+    let start = lines_iter
+        .next()
+        .unwrap()
+        .chars()
+        .position(|x| x == 'S')
+        .unwrap();
+
+    // skip blank line
     lines_iter.next();
+
+    let mut grid: Vec<Vec<bool>> = vec![];
+    // continue to skip the alternating blank lines
     while let (Some(line), Some(_)) = (lines_iter.next(), lines_iter.next()) {
-        v.push(line.bytes().map(|x| x == b'^').collect::<Vec<bool>>());
+        grid.push(line.bytes().map(|x| x == b'^').collect::<Vec<bool>>());
     }
+
+    (start, grid)
+}
+
+// DAY 7 PART 1
+pub fn laboratories(input: &'static str) -> i32 {
+    let (start, grid) = create_grid_and_start(input);
 
     let mut ans = 0;
     let mut beams: HashSet<usize, RandomState> = HashSet::default();
     beams.insert(start);
-    for row in v {
+    for row in grid {
         let mut beams_to_be_added = vec![];
         let mut beams_to_be_removed: HashSet<usize, RandomState> = HashSet::default();
         for (j, &val) in row.iter().enumerate() {
@@ -754,17 +513,9 @@ pub fn laboratories(input: &'static str) -> i32 {
     ans
 }
 
+// DAY 7 PART 2
 pub fn laboratories2(input: &'static str) -> i64 {
-    let mut v = vec![];
-    let mut lines_iter = input.lines();
-    let start = lines_iter.next().map_or_else(
-        || panic!(),
-        |first_line| first_line.chars().position(|x| x == 'S').unwrap(),
-    );
-    lines_iter.next();
-    while let (Some(line), Some(_)) = (lines_iter.next(), lines_iter.next()) {
-        v.push(line.bytes().map(|x| x == b'^').collect::<Vec<bool>>());
-    }
+    let (start, grid) = create_grid_and_start(input);
 
     fn dpfn(
         grid: &[Vec<bool>],
@@ -792,10 +543,10 @@ pub fn laboratories2(input: &'static str) -> i64 {
         best
     }
 
-    dpfn(&v, 0, start as i32, &mut HashMap::default())
+    dpfn(&grid, 0, start as i32, &mut HashMap::default())
 }
 
-struct UnionFind {
+pub struct UnionFind {
     pub uf: Vec<usize>,
     pub rank: Vec<usize>,
     pub groups: usize,
@@ -812,6 +563,7 @@ impl UnionFind {
 
     pub fn find_parent(&mut self, mut a: usize) -> usize {
         while self.uf[a] != a {
+            // skips straight to grandparent
             self.uf[a] = self.uf[self.uf[a]];
             a = self.uf[a];
         }
@@ -840,31 +592,46 @@ impl UnionFind {
 }
 
 const fn straight_line_dist(p1: (i32, i32, i32), p2: (i32, i32, i32)) -> i64 {
-    let x = p2.0 as i128 - p1.0 as i128;
-    let y = p2.1 as i128 - p1.1 as i128;
-    let z = p2.2 as i128 - p1.2 as i128;
+    let x = (p2.0 as i64 - p1.0 as i64) as i128;
+    let y = (p2.1 as i64 - p1.1 as i64) as i128;
+    let z = (p2.2 as i64 - p1.2 as i64) as i128;
     let a = x * x + y * y + z * z;
 
     (a as u128).isqrt() as i64
 }
 
-pub fn playground(input: &'static str, k: i32) -> i64 {
-    let mut coords = vec![];
-    for line in input.lines() {
-        let p = line
-            .split(',')
-            .map(|x| x.parse::<i32>().unwrap())
-            .collect::<Vec<i32>>();
+// helper for parsing playground input
+fn create_coords(input: &'static str) -> Vec<(i32, i32, i32)> {
+    input
+        .lines()
+        .map(|line| {
+            let p = line
+                .split(',')
+                .map(|x| x.parse::<i32>().unwrap())
+                .collect::<Vec<i32>>();
 
-        coords.push((p[0], p[1], p[2]));
-    }
+            (p[0], p[1], p[2])
+        })
+        .collect()
+}
 
+fn create_shortest_dist_heap(
+    coords: &[(i32, i32, i32)],
+) -> BinaryHeap<(std::cmp::Reverse<i64>, (usize, usize))> {
     let mut shortest_distances = BinaryHeap::new();
     for (i, &p1) in coords.iter().enumerate() {
         for (j, &p2) in coords.iter().enumerate().skip(i + 1) {
             shortest_distances.push((std::cmp::Reverse(straight_line_dist(p1, p2)), (i, j)));
         }
     }
+
+    shortest_distances
+}
+
+// DAY 8 PART 1
+pub fn playground(input: &'static str, k: i32) -> i64 {
+    let coords = create_coords(input);
+    let mut shortest_distances = create_shortest_dist_heap(&coords);
 
     let mut uf = UnionFind::new(coords.len());
     let mut count = 0;
@@ -876,29 +643,16 @@ pub fn playground(input: &'static str, k: i32) -> i64 {
     }
 
     let mut v = uf.rank;
-    v.sort_unstable();
+    v.par_sort_unstable();
     let n = v.len();
 
     (v[n - 1] * v[n - 2] * v[n - 3]) as i64
 }
 
+// DAY 8 PART 2
 pub fn playground2(input: &'static str) -> i64 {
-    let mut coords = vec![];
-    for line in input.lines() {
-        let p = line
-            .split(',')
-            .map(|x| x.parse::<i32>().unwrap())
-            .collect::<Vec<i32>>();
-
-        coords.push((p[0], p[1], p[2]));
-    }
-
-    let mut shortest_distances = BinaryHeap::new();
-    for (i, &p1) in coords.iter().enumerate() {
-        for (j, &p2) in coords.iter().enumerate().skip(i + 1) {
-            shortest_distances.push((std::cmp::Reverse(straight_line_dist(p1, p2)), (i, j)));
-        }
-    }
+    let coords = create_coords(input);
+    let mut shortest_distances = create_shortest_dist_heap(&coords);
 
     let mut uf = UnionFind::new(coords.len());
     while let Some((_, (i, j))) = shortest_distances.pop() {
@@ -911,16 +665,23 @@ pub fn playground2(input: &'static str) -> i64 {
     -1
 }
 
-pub fn movie_theater(input: &'static str) -> i64 {
-    let mut tiles = vec![];
-    for line in input.lines() {
-        let mut line_iter = line.split(',');
-        tiles.push((
-            line_iter.next().unwrap().parse::<i32>().unwrap(),
-            line_iter.next().unwrap().parse::<i32>().unwrap(),
-        ));
-    }
+// helper for movie theater to parse input
+fn create_tiles(input: &'static str) -> Vec<(i32, i32)> {
+    input
+        .lines()
+        .map(|line| {
+            let mut line_iter = line.split(',');
+            (
+                line_iter.next().unwrap().parse::<i32>().unwrap(),
+                line_iter.next().unwrap().parse::<i32>().unwrap(),
+            )
+        })
+        .collect()
+}
 
+// DAY 9 PART 1
+pub fn movie_theater(input: &'static str) -> i64 {
+    let tiles = create_tiles(input);
     let mut ans = 0;
     for (i, &(p1x, p1y)) in tiles.iter().enumerate() {
         for &(p2x, p2y) in tiles.iter().skip(i + 1) {
@@ -930,15 +691,9 @@ pub fn movie_theater(input: &'static str) -> i64 {
     ans
 }
 
+// DAY 9 PART 2
 pub fn movie_theater2(input: &'static str) -> i64 {
-    let mut tiles = vec![];
-    for line in input.lines() {
-        let mut line_iter = line.split(',');
-        tiles.push((
-            line_iter.next().unwrap().parse::<i32>().unwrap(),
-            line_iter.next().unwrap().parse::<i32>().unwrap(),
-        ));
-    }
+    let tiles = create_tiles(input);
 
     let mut edges = vec![];
     for (&(t1x, t1y), &(t2x, t2y)) in tiles.iter().tuple_windows() {
@@ -989,6 +744,7 @@ pub fn factory_dfs(btns: &[u16], target: u16) -> u16 {
     0
 }
 
+// DAY 10 PART 1
 pub fn factory(input: &'static str) -> u16 {
     let mut targets = vec![];
     let mut buttons = vec![];
@@ -1024,6 +780,6 @@ pub fn factory(input: &'static str) -> u16 {
 }
 
 fn main() {
-    assert!(factory(include_str!("../2025/d10t1.txt")) == 7);
-    println!("{:?}", factory(include_str!("../2025/d10.txt")));
+    assert!(factory(include_str!("../inputs/d10t1.txt")) == 7);
+    println!("{:?}", factory(include_str!("../inputs/d10.txt")));
 }
