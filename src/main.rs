@@ -6,7 +6,7 @@ use ahash::{AHashMap, AHashSet};
 use itertools::Itertools;
 use rayon::prelude::*;
 use smallvec::SmallVec;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, VecDeque};
 use tracing::info;
 
 mod tests;
@@ -775,43 +775,166 @@ pub fn factory(input: &'static str) -> u16 {
     ans
 }
 
-// // DAY 10 PART 2
-// pub fn factory2(input: &'static str) -> u16 {
-//     let mut buttons = vec![];
-//     let mut requirements = vec![];
-//     for line in input.lines() {
-//         let mut parts = line.split_ascii_whitespace();
-//         parts.next();
+const fn update_progress(mut btn: u16, progress: &mut [u16]) {
+    let mut i = 0;
+    while btn > 0 {
+        if btn & 1 == 1 {
+            progress[i] += 1;
+        }
+        btn >>= 1;
+        i += 1;
+    }
+}
 
-//         let mut btns = vec![];
-//         let remaining: Vec<&str> = parts.collect();
-//         for section in remaining.iter().take(remaining.len() - 1) {
-//             let s: Vec<char> = section.chars().collect();
-//             let s: String = s[1..s.len() - 1].iter().collect();
-//             btns.push(
-//                 s.split(',')
-//                     .fold(0u16, |acc, x| acc | (1 << x.parse::<u16>().unwrap())),
-//             );
-//         }
-//         buttons.push(btns);
+pub fn factory2_dfs(btns: &[u16], reqs: &[u16]) -> u16 {
+    let mut st: VecDeque<(u8, Vec<u16>, u16)> = (0..btns.len() as u8)
+        .map(|x| (x, vec![0; reqs.len()], 1))
+        .collect();
 
-//         let s: Vec<char> = remaining.last().unwrap().chars().collect();
-//         let s: String = s[1..s.len() - 1].iter().collect();
-//         requirements.push(
-//             s.split(',')
-//                 .map(|x| x.parse::<u16>().unwrap())
-//                 .collect::<Vec<u16>>(),
-//         );
-//     }
+    while let Some((idx, mut progress, depth)) = st.pop_front() {
+        update_progress(btns[idx as usize], &mut progress);
+        if progress.iter().zip(reqs.iter()).any(|(p, r)| p > r) {
+            continue;
+        }
+        if progress == reqs {
+            return depth;
+        }
 
-//     let mut ans = 0;
-//     for (reqs, btns) in requirements.iter().zip(buttons.iter()) {
-//         // add a visited memo to cut paths
-//         ans += 1; //factory_dfs(btns, target);
-//     }
+        for sub_idx in idx..btns.len() as u8 {
+            st.push_back((sub_idx, progress.clone(), depth + 1));
+        }
+    }
 
-//     ans
-// }
+    0
+}
+
+// DAY 10 PART 2 SLOW SOLUTION
+pub fn factory2bad(input: &'static str) -> u16 {
+    let mut buttons = vec![];
+    let mut requirements = vec![];
+    for line in input.lines() {
+        let mut parts = line.split_ascii_whitespace();
+        parts.next();
+
+        let mut btns = vec![];
+        let remaining: Vec<&str> = parts.collect();
+        for section in remaining.iter().take(remaining.len() - 1) {
+            let s: Vec<char> = section.chars().collect();
+            let s: String = s[1..s.len() - 1].iter().collect();
+            btns.push(
+                s.split(',')
+                    .fold(0u16, |acc, x| acc | (1 << x.parse::<u16>().unwrap())),
+            );
+        }
+        buttons.push(btns);
+
+        let s: Vec<char> = remaining.last().unwrap().chars().collect();
+        let s: String = s[1..s.len() - 1].iter().collect();
+        requirements.push(
+            s.split(',')
+                .map(|x| x.parse::<u16>().unwrap())
+                .collect::<Vec<u16>>(),
+        );
+    }
+
+    let mut ans = 0;
+    for (reqs, btns) in requirements.iter().zip(buttons.iter()) {
+        ans += factory2_dfs(btns, reqs);
+    }
+
+    ans
+}
+
+// DAY 10 PART 2
+pub fn factory2(input: &'static str) -> u16 {
+    let mut buttons = vec![];
+    let mut requirements = vec![];
+    for line in input.lines() {
+        let mut parts = line.split_ascii_whitespace();
+        parts.next();
+
+        let mut btns = vec![];
+        let remaining: Vec<&str> = parts.collect();
+        for section in remaining.iter().take(remaining.len() - 1) {
+            let s: Vec<char> = section.chars().collect();
+            let s: String = s[1..s.len() - 1].iter().collect();
+            btns.push(
+                s.split(',')
+                    .fold(0u16, |acc, x| acc | (1 << x.parse::<u16>().unwrap())),
+            );
+        }
+        buttons.push(btns);
+
+        let s: Vec<char> = remaining.last().unwrap().chars().collect();
+        let s: String = s[1..s.len() - 1].iter().collect();
+        requirements.push(
+            s.split(',')
+                .map(|x| x.parse::<u16>().unwrap())
+                .collect::<Vec<u16>>(),
+        );
+
+        assert!(requirements[requirements.len() - 1].len() <= 16);
+    }
+
+    use good_lp::{Expression, Solution, SolverModel, microlp, variable, variables};
+
+    let mut ans = 0;
+    for (reqs, btns) in requirements.iter().zip(buttons.iter()) {
+        let mut variables = variables!();
+        let mut btn_vars = vec![];
+        for _ in 0..btns.len() {
+            btn_vars.push(variables.add(variable().min(0).max(1000).integer()));
+        }
+
+        let obj: Expression = btn_vars.iter().sum();
+
+        let mut model = variables.minimise(obj).using(microlp);
+
+        for (i, &req) in reqs.iter().enumerate() {
+            let mut expression_vars = vec![];
+            for (j, &btn) in btns.iter().enumerate() {
+                if btn & (1 << i) != 0 {
+                    expression_vars.push(btn_vars[j]);
+                }
+            }
+            let con: Expression = expression_vars.iter().sum();
+
+            model.add_constraint(con.eq(req));
+        }
+
+        let solution = model.solve().unwrap();
+        let mut final_ans = 0;
+        for var in btn_vars {
+            final_ans += solution.value(var).round() as u16;
+        }
+
+        // my test suite to make sure all of the answers was as expected
+        // the bug here was that I was doing
+        // solution.value(var) as u16 instead of solution.value(var).round() as u16
+        // -_-
+        // let mut test_vec = vec![0; reqs.len()];
+        // for (i, &c) in answers.iter().enumerate() {
+        //     if c == 0 {
+        //         continue;
+        //     }
+
+        //     let mut btn = btns[i];
+        //     let mut j = 0;
+        //     while btn > 0 {
+        //         if btn & 1 == 1 {
+        //             test_vec[j] += c;
+        //         }
+        //         btn >>= 1;
+        //         j += 1;
+        //     }
+        // }
+        // assert!(test_vec == *reqs);
+
+        ans += final_ans;
+    }
+
+    ans
+}
 
 #[allow(dead_code)]
 const fn str_to_u32(s: &str) -> u32 {
@@ -862,6 +985,7 @@ fn create_adj_list(input: &'static str) -> AHashMap<u16, SmallVec<[u16; 21]>> {
 // DAY 11 PART 1
 pub fn reactor(input: &'static str) -> i32 {
     let adj_list = create_adj_list(input);
+    assert!(!adj_list.is_empty());
 
     fn dp(
         adj_list: &AHashMap<u16, SmallVec<[u16; 21]>>,
@@ -897,6 +1021,7 @@ pub fn reactor(input: &'static str) -> i32 {
 // DAY 11 PART 2
 pub fn reactor2(input: &'static str) -> i64 {
     let adj_list = create_adj_list(input);
+    assert!(!adj_list.is_empty());
 
     #[allow(clippy::too_many_arguments)]
     fn dp(
@@ -950,6 +1075,62 @@ pub fn reactor2(input: &'static str) -> i64 {
     )
 }
 
+// DAY 12 PART 1
+// STILL WORKING ON THIS SOLUTION
+// pub fn christmas_tree_farm(input: &'static str) -> i32 {
+//     let parts: Vec<&str> = input.split("\r\n\r\n").collect();
+//     let mut presents = vec![];
+//     for p in parts.iter().take(parts.len() - 1) {
+//         let mut p_itr = p.lines();
+//         p_itr.next();
+//         let mut present = [[false; 3]; 3];
+//         for (i, line) in p_itr.enumerate() {
+//             let r = line.bytes().map(|x| x - b'#' == 0).collect::<Vec<bool>>();
+//             present[i].copy_from_slice(&r[..3]);
+//         }
+//         presents.push(present);
+//     }
+//     assert!(!presents.is_empty());
+
+//     let mut diamentions = vec![];
+//     let mut required_presents = vec![];
+//     for line in parts.last().unwrap().lines() {
+//         let mut line_iter = line.split(':');
+//         let dia = line_iter
+//             .next()
+//             .unwrap()
+//             .split('x')
+//             .map(|x| x.parse::<u8>().unwrap())
+//             .collect::<Vec<u8>>();
+//         diamentions.push((dia[0], dia[1]));
+
+//         required_presents.push(
+//             line_iter
+//                 .next()
+//                 .unwrap()
+//                 .split_whitespace()
+//                 .map(|x| x.parse::<u8>().unwrap())
+//                 .collect::<Vec<u8>>(),
+//         );
+//     }
+//     assert!(!diamentions.is_empty());
+//     assert!(!required_presents.is_empty());
+//     assert!(diamentions.len() == required_presents.len());
+
+//     let mut ans = 0;
+//     for (&(m, n), presents) in diamentions.iter().zip(required_presents.iter()) {
+//         let mut tree = vec![vec![false; n as usize]; m as usize];
+//         let mut presents_to_fit = vec![];
+//         for (i, &count) in presents.iter().enumerate() {
+//             for _ in 0..count {
+//                 presents_to_fit.push(presents[i]);
+//             }
+//         }
+//     }
+
+//     ans
+// }
+
 fn main() {
     let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
     tracing_subscriber::fmt()
@@ -957,6 +1138,6 @@ fn main() {
         .without_time()
         .init();
 
-    assert!(reactor2(include_str!("../inputs/d11t2.txt")) == 2);
-    info!("{:?}", reactor2(include_str!("../inputs/d11.txt")));
+    // assert!(christmas_tree_farm(include_str!("../inputs/d12t1.txt")) == 2);
+    // info!("{}", christmas_tree_farm(include_str!("../inputs/d12.txt")));
 }

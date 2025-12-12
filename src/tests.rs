@@ -122,9 +122,8 @@ fn d10() {
     assert!(factory(include_str!("../inputs/d10t1.txt")) == 7);
     assert!(factory(include_str!("../inputs/d10.txt")) == 422);
 
-    // still working on finding this solution
-    //assert!(factory2(include_str!("../inputs/d10t1.txt")) == 33);
-    //assert!(factory2(include_str!("../inputs/d10.txt")) == 422);
+    assert!(factory2(include_str!("../inputs/d10t1.txt")) == 33);
+    assert!(factory2(include_str!("../inputs/d10.txt")) == 16361);
     println!("{} {:?}", function_name!(), t.elapsed());
 }
 
@@ -137,6 +136,18 @@ fn d11() {
 
     assert!(reactor2(include_str!("../inputs/d11t2.txt")) == 2);
     assert!(reactor2(include_str!("../inputs/d11.txt")) == 372_918_445_876_116);
+    println!("{} {:?}", function_name!(), t.elapsed());
+}
+
+#[test]
+#[named]
+fn d12() {
+    let t = std::time::Instant::now();
+    //assert!(christmas_tree_farm(include_str!("../inputs/d12t1.txt")) == 2);
+    // assert!(christmas_tree_farm(include_str!("../inputs/d12.txt")) == 613);
+
+    // assert!(christmas_tree_farm2(include_str!("../inputs/d12t1.txt")) == 2);
+    // assert!(christmas_tree_farm2(include_str!("../inputs/d12.txt")) == 372_918_445_876_116);
     println!("{} {:?}", function_name!(), t.elapsed());
 }
 
