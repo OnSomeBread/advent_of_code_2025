@@ -3,6 +3,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use ahash::{AHashMap, AHashSet};
+use good_lp::{Expression, Solution, SolverModel, microlp, variable, variables};
 use itertools::Itertools;
 use rayon::prelude::*;
 use smallvec::SmallVec;
@@ -13,7 +14,7 @@ mod tests;
 
 // DAY 1 PART 1
 pub fn secret_entrance(input: &'static str) -> i32 {
-    let mut curr: i32 = 50;
+    let mut curr = 50;
     let mut ans = 0;
 
     for turn in input.lines() {
@@ -36,7 +37,7 @@ pub fn secret_entrance2(input: &'static str) -> i32 {
     for turn in input.lines() {
         let mut letters_iter = turn.chars();
         let l0 = letters_iter.next().unwrap();
-        let amt = letters_iter.collect::<String>().parse::<i32>().unwrap();
+        let amt = letters_iter.collect::<String>().parse().unwrap();
 
         for i in 1..=amt {
             if l0 == 'R' {
@@ -62,6 +63,7 @@ pub fn gift_shop(input: &'static str) -> i64 {
             let mut total = 0;
             for num in range.next().unwrap()..=range.next().unwrap() {
                 let str_num: SmallVec<[char; 20]> = num.to_string().chars().collect();
+                assert!(!str_num.spilled());
                 let num_len = str_num.len();
                 if num_len.is_multiple_of(2) {
                     let n = num_len / 2;
@@ -86,6 +88,7 @@ pub fn gift_shop2(input: &'static str) -> i64 {
             let mut total = 0;
             for num in range.next().unwrap()..=range.next().unwrap() {
                 let str_num: SmallVec<[char; 20]> = num.to_string().chars().collect();
+                assert!(!str_num.spilled());
                 let num_len = str_num.len();
 
                 let mut invalid = false;
@@ -307,7 +310,7 @@ pub fn cafeteria(input: &'static str) -> i32 {
         .unwrap()
         .lines()
         .map(|line| {
-            let mut range = line.split('-').map(|x| x.parse::<i64>().unwrap());
+            let mut range = line.split('-').map(|x| x.parse().unwrap());
             (range.next().unwrap(), range.next().unwrap())
         })
         .collect();
@@ -330,7 +333,7 @@ pub fn cafeteria(input: &'static str) -> i32 {
         .lines()
         .par_bridge()
         .map(|line| {
-            let id = line.parse::<i64>().unwrap();
+            let id = line.parse().unwrap();
             intervals.binary_search_by(|&e| cafe_order(e, id)).is_ok() as i32
         })
         .sum()
@@ -344,7 +347,7 @@ pub fn cafeteria2(input: &'static str) -> i64 {
         .unwrap()
         .lines()
         .map(|line| {
-            let mut range = line.split('-').map(|x| x.parse::<i64>().unwrap());
+            let mut range = line.split('-').map(|x| x.parse().unwrap());
             (range.next().unwrap(), range.next().unwrap())
         })
         .collect();
@@ -383,7 +386,7 @@ pub fn trash_compactor(input: &'static str) -> i64 {
         .lines()
         .map(|line| {
             line.split_whitespace()
-                .filter_map(|x| x.parse::<i64>().ok())
+                .filter_map(|x| x.parse().ok())
                 .collect()
         })
         .collect();
@@ -603,7 +606,7 @@ fn create_coords(input: &'static str) -> Vec<(i32, i32, i32)> {
         .map(|line| {
             let p = line
                 .split(',')
-                .map(|x| x.parse::<i32>().unwrap())
+                .map(|x| x.parse().unwrap())
                 .collect::<Vec<i32>>();
 
             (p[0], p[1], p[2])
@@ -668,8 +671,8 @@ fn create_tiles(input: &'static str) -> Vec<(i32, i32)> {
         .map(|line| {
             let mut line_iter = line.split(',');
             (
-                line_iter.next().unwrap().parse::<i32>().unwrap(),
-                line_iter.next().unwrap().parse::<i32>().unwrap(),
+                line_iter.next().unwrap().parse().unwrap(),
+                line_iter.next().unwrap().parse().unwrap(),
             )
         })
         .collect()
@@ -767,12 +770,11 @@ pub fn factory(input: &'static str) -> u16 {
         buttons.push(btns);
     }
 
-    let mut ans = 0;
-    for (&target, btns) in targets.iter().zip(buttons.iter()) {
-        ans += factory_dfs(btns, target);
-    }
-
-    ans
+    targets
+        .par_iter()
+        .zip(buttons.par_iter())
+        .map(|(&target, btns)| factory_dfs(btns, target))
+        .sum()
 }
 
 const fn update_progress(mut btn: u16, progress: &mut [u16]) {
@@ -832,17 +834,68 @@ pub fn factory2bad(input: &'static str) -> u16 {
         let s: String = s[1..s.len() - 1].iter().collect();
         requirements.push(
             s.split(',')
-                .map(|x| x.parse::<u16>().unwrap())
+                .map(|x| x.parse().unwrap())
                 .collect::<Vec<u16>>(),
         );
     }
 
-    let mut ans = 0;
-    for (reqs, btns) in requirements.iter().zip(buttons.iter()) {
-        ans += factory2_dfs(btns, reqs);
+    requirements
+        .par_iter()
+        .zip(buttons.par_iter())
+        .map(|(reqs, btns)| factory2_dfs(btns, reqs))
+        .sum()
+}
+
+fn factory2_solver(reqs: &[u16], btns: &[u16]) -> u16 {
+    let mut variables = variables!();
+    let mut btn_vars = vec![];
+    for _ in 0..btns.len() {
+        btn_vars.push(variables.add(variable().min(0).max(1000).integer()));
     }
 
-    ans
+    let obj: Expression = btn_vars.iter().sum();
+
+    let mut model = variables.minimise(obj).using(microlp);
+
+    for (i, &req) in reqs.iter().enumerate() {
+        let mut expression_vars = vec![];
+        for (j, &btn) in btns.iter().enumerate() {
+            if btn & (1 << i) != 0 {
+                expression_vars.push(btn_vars[j]);
+            }
+        }
+        let con: Expression = expression_vars.iter().sum();
+
+        model.add_constraint(con.eq(req));
+    }
+
+    let solution = model.solve().unwrap();
+    btn_vars
+        .iter()
+        .map(|&var| solution.value(var).round() as u16)
+        .sum()
+
+    // my test suite to make sure all of the answers was as expected
+    // the bug here was that I was doing
+    // solution.value(var) as u16 instead of solution.value(var).round() as u16
+    // -_-
+    // let mut test_vec = vec![0; reqs.len()];
+    // for (i, &c) in answers.iter().enumerate() {
+    //     if c == 0 {
+    //         continue;
+    //     }
+
+    //     let mut btn = btns[i];
+    //     let mut j = 0;
+    //     while btn > 0 {
+    //         if btn & 1 == 1 {
+    //             test_vec[j] += c;
+    //         }
+    //         btn >>= 1;
+    //         j += 1;
+    //     }
+    // }
+    // assert!(test_vec == *reqs);
 }
 
 // DAY 10 PART 2
@@ -869,71 +922,18 @@ pub fn factory2(input: &'static str) -> u16 {
         let s: String = s[1..s.len() - 1].iter().collect();
         requirements.push(
             s.split(',')
-                .map(|x| x.parse::<u16>().unwrap())
+                .map(|x| x.parse().unwrap())
                 .collect::<Vec<u16>>(),
         );
 
         assert!(requirements[requirements.len() - 1].len() <= 16);
     }
 
-    use good_lp::{Expression, Solution, SolverModel, microlp, variable, variables};
-
-    let mut ans = 0;
-    for (reqs, btns) in requirements.iter().zip(buttons.iter()) {
-        let mut variables = variables!();
-        let mut btn_vars = vec![];
-        for _ in 0..btns.len() {
-            btn_vars.push(variables.add(variable().min(0).max(1000).integer()));
-        }
-
-        let obj: Expression = btn_vars.iter().sum();
-
-        let mut model = variables.minimise(obj).using(microlp);
-
-        for (i, &req) in reqs.iter().enumerate() {
-            let mut expression_vars = vec![];
-            for (j, &btn) in btns.iter().enumerate() {
-                if btn & (1 << i) != 0 {
-                    expression_vars.push(btn_vars[j]);
-                }
-            }
-            let con: Expression = expression_vars.iter().sum();
-
-            model.add_constraint(con.eq(req));
-        }
-
-        let solution = model.solve().unwrap();
-        let mut final_ans = 0;
-        for var in btn_vars {
-            final_ans += solution.value(var).round() as u16;
-        }
-
-        // my test suite to make sure all of the answers was as expected
-        // the bug here was that I was doing
-        // solution.value(var) as u16 instead of solution.value(var).round() as u16
-        // -_-
-        // let mut test_vec = vec![0; reqs.len()];
-        // for (i, &c) in answers.iter().enumerate() {
-        //     if c == 0 {
-        //         continue;
-        //     }
-
-        //     let mut btn = btns[i];
-        //     let mut j = 0;
-        //     while btn > 0 {
-        //         if btn & 1 == 1 {
-        //             test_vec[j] += c;
-        //         }
-        //         btn >>= 1;
-        //         j += 1;
-        //     }
-        // }
-        // assert!(test_vec == *reqs);
-
-        ans += final_ans;
-    }
-
-    ans
+    requirements
+        .par_iter()
+        .zip(buttons.par_iter())
+        .map(|(reqs, btns)| factory2_solver(reqs, btns))
+        .sum()
 }
 
 #[allow(dead_code)]
@@ -979,6 +979,8 @@ fn create_adj_list(input: &'static str) -> AHashMap<u16, SmallVec<[u16; 21]>> {
             .or_default()
             .extend(values.into_iter());
     }
+
+    adj_list.values().for_each(|x| assert!(!x.spilled()));
     adj_list
 }
 
@@ -1075,61 +1077,147 @@ pub fn reactor2(input: &'static str) -> i64 {
     )
 }
 
-// DAY 12 PART 1
-// STILL WORKING ON THIS SOLUTION
-// pub fn christmas_tree_farm(input: &'static str) -> i32 {
-//     let parts: Vec<&str> = input.split("\r\n\r\n").collect();
-//     let mut presents = vec![];
-//     for p in parts.iter().take(parts.len() - 1) {
-//         let mut p_itr = p.lines();
-//         p_itr.next();
-//         let mut present = [[false; 3]; 3];
-//         for (i, line) in p_itr.enumerate() {
-//             let r = line.bytes().map(|x| x - b'#' == 0).collect::<Vec<bool>>();
-//             present[i].copy_from_slice(&r[..3]);
-//         }
-//         presents.push(present);
-//     }
-//     assert!(!presents.is_empty());
+pub const fn rotate_3x3(m: &mut [[bool; 3]; 3]) {
+    let c1 = m[0][0];
+    let c2 = m[0][2];
+    let c3 = m[2][0];
+    let c4 = m[2][2];
+    m[0][0] = c4;
+    m[0][2] = c1;
+    m[2][0] = c2;
+    m[2][2] = c3;
 
-//     let mut diamentions = vec![];
-//     let mut required_presents = vec![];
-//     for line in parts.last().unwrap().lines() {
-//         let mut line_iter = line.split(':');
-//         let dia = line_iter
-//             .next()
-//             .unwrap()
-//             .split('x')
-//             .map(|x| x.parse::<u8>().unwrap())
-//             .collect::<Vec<u8>>();
-//         diamentions.push((dia[0], dia[1]));
+    let c1 = m[0][1];
+    let c2 = m[1][2];
+    let c3 = m[2][1];
+    let c4 = m[1][0];
 
-//         required_presents.push(
-//             line_iter
-//                 .next()
-//                 .unwrap()
-//                 .split_whitespace()
-//                 .map(|x| x.parse::<u8>().unwrap())
-//                 .collect::<Vec<u8>>(),
-//         );
-//     }
-//     assert!(!diamentions.is_empty());
-//     assert!(!required_presents.is_empty());
-//     assert!(diamentions.len() == required_presents.len());
+    m[0][1] = c4;
+    m[1][2] = c1;
+    m[2][1] = c2;
+    m[1][0] = c3;
+}
 
-//     let mut ans = 0;
-//     for (&(m, n), presents) in diamentions.iter().zip(required_presents.iter()) {
-//         let mut tree = vec![vec![false; n as usize]; m as usize];
-//         let mut presents_to_fit = vec![];
-//         for (i, &count) in presents.iter().enumerate() {
-//             for _ in 0..count {
-//                 presents_to_fit.push(presents[i]);
+// fn is_valid_placement(tree: &[Vec<bool>], present: &[[bool; 3]; 3], i: usize, j: usize) -> bool {
+//     for k in 0..3 {
+//         for l in 0..3 {
+//             if present[k][l] && tree[i + k][j + l] {
+//                 return false;
 //             }
 //         }
 //     }
 
-//     ans
+//     true
 // }
+
+// fn place_present(
+//     tree: &mut [Vec<bool>],
+//     present: &[[bool; 3]; 3],
+//     i: usize,
+//     j: usize,
+//     is_placing: bool,
+// ) {
+//     let mut k = 0;
+//     while k < 3 {
+//         let mut l = 0;
+//         while l < 3 {
+//             if present[k][l] {
+//                 tree[i + k][j + l] = is_placing;
+//             }
+//             l += 1;
+//         }
+//         k += 1;
+//     }
+// }
+
+// DAY 12 PART 1
+pub fn christmas_tree_farm(input: &'static str) -> i32 {
+    let parts: Vec<&str> = input.split("\r\n\r\n").collect();
+    let mut presents = vec![];
+    for p in parts.iter().take(parts.len() - 1) {
+        let mut p_itr = p.lines();
+        p_itr.next();
+        let mut present = [[false; 3]; 3];
+        for (i, line) in p_itr.enumerate() {
+            let r = line.bytes().map(|x| x - b'#' == 0).collect::<Vec<bool>>();
+            present[i].copy_from_slice(&r[..3]);
+        }
+        presents.push(present);
+    }
+    assert!(!presents.is_empty());
+
+    let mut diamentions = vec![];
+    let mut required_presents = vec![];
+    for line in parts.last().unwrap().lines() {
+        let mut line_iter = line.split(':');
+        let dia = line_iter
+            .next()
+            .unwrap()
+            .split('x')
+            .map(|x| x.parse().unwrap())
+            .collect::<Vec<u8>>();
+        diamentions.push((dia[0], dia[1]));
+
+        required_presents.push(
+            line_iter
+                .next()
+                .unwrap()
+                .split_whitespace()
+                .map(|x| x.parse().unwrap())
+                .collect::<Vec<u8>>(),
+        );
+    }
+    assert!(!diamentions.is_empty());
+    assert!(!required_presents.is_empty());
+    assert!(diamentions.len() == required_presents.len());
+
+    // fn backtrack(
+    //     idx: usize,
+    //     presents_to_fit: &Vec<u8>,
+    //     presents: &Vec<[[bool; 3]; 3]>,
+    //     mut tree: Vec<Vec<bool>>,
+    // ) -> bool {
+    //     if idx >= presents_to_fit.len() {
+    //         return true;
+    //     }
+    //     let m = tree.len();
+    //     let n = tree[0].len();
+
+    //     if (presents_to_fit.len() - idx) * 5 > m * n {
+    //         return false;
+    //     }
+
+    //     let mut pres = presents[presents_to_fit[idx] as usize];
+    //     for _ in 0..4 {
+    //         for i in 0..m - 2 {
+    //             for j in 0..n - 2 {
+    //                 if is_valid_placement(&tree, &pres, i, j) {
+    //                     place_present(&mut tree, &pres, i, j, true);
+    //                     if backtrack(idx + 1, presents_to_fit, presents, tree.clone()) {
+    //                         return true;
+    //                     }
+    //                     place_present(&mut tree, &pres, i, j, false);
+    //                 }
+    //             }
+    //         }
+    //         rotate_3x3(&mut pres);
+    //     }
+
+    //     false
+    // }
+
+    // really... backtracking too slow trying to cut on branches and see where my solution is around and this works
+    diamentions
+        .iter()
+        .zip(required_presents.iter())
+        .map(|(&(m, n), req_presents)| {
+            i32::from(
+                req_presents.iter().fold(0, |acc, &v| acc + v as u16)
+                    <= (m as u16 / 3) * (n as u16 / 3),
+            )
+        })
+        .sum()
+}
 
 fn main() {
     let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
@@ -1138,6 +1226,5 @@ fn main() {
         .without_time()
         .init();
 
-    // assert!(christmas_tree_farm(include_str!("../inputs/d12t1.txt")) == 2);
-    // info!("{}", christmas_tree_farm(include_str!("../inputs/d12.txt")));
+    info!("{}", christmas_tree_farm(include_str!("../inputs/d12.txt")));
 }

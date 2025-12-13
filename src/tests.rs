@@ -143,12 +143,21 @@ fn d11() {
 #[named]
 fn d12() {
     let t = std::time::Instant::now();
-    //assert!(christmas_tree_farm(include_str!("../inputs/d12t1.txt")) == 2);
-    // assert!(christmas_tree_farm(include_str!("../inputs/d12.txt")) == 613);
+    assert!(christmas_tree_farm(include_str!("../inputs/d12.txt")) == 599);
 
-    // assert!(christmas_tree_farm2(include_str!("../inputs/d12t1.txt")) == 2);
-    // assert!(christmas_tree_farm2(include_str!("../inputs/d12.txt")) == 372_918_445_876_116);
     println!("{} {:?}", function_name!(), t.elapsed());
+}
+
+#[test]
+fn test_matrix_rotation() {
+    let m = [[true, true, true], [false, false, true], [true, true, true]];
+    let mut tm = m;
+    rotate_3x3(&mut tm);
+    rotate_3x3(&mut tm);
+    rotate_3x3(&mut tm);
+    rotate_3x3(&mut tm);
+
+    assert!(tm == m);
 }
 
 proptest! {
