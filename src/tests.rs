@@ -1,6 +1,6 @@
 #![cfg(test)]
 use ::function_name::named;
-use pretty_assertions::{assert_eq, assert_ne};
+use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 use tracing::debug;
 

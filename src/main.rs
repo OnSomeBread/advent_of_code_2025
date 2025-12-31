@@ -2,7 +2,7 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use ahash::{AHashMap, AHashSet};
+use ahash::{AHashMap as HashMap, AHashSet as HashSet};
 use good_lp::{Expression, Solution, SolverModel, microlp, variable, variables};
 use itertools::Itertools;
 use rayon::prelude::*;
@@ -138,7 +138,7 @@ pub fn lobby(input: &'static str) -> i32 {
 
 // DAY 3 PART 2 SLOW SOLUTION
 pub fn lobby2_top_down(input: &'static str) -> i64 {
-    fn dp(nums: &Vec<i32>, i: usize, count: i32, cache: &mut AHashMap<(usize, i32), i64>) -> i64 {
+    fn dp(nums: &Vec<i32>, i: usize, count: i32, cache: &mut HashMap<(usize, i32), i64>) -> i64 {
         if count == 12 {
             return 0;
         }
@@ -169,7 +169,7 @@ pub fn lobby2_top_down(input: &'static str) -> i64 {
                 .map(|x| x.to_digit(10).unwrap() as i32)
                 .collect();
 
-            dp(&nums, 0, 0, &mut AHashMap::new())
+            dp(&nums, 0, 0, &mut HashMap::new())
         })
         .sum()
 }
@@ -496,11 +496,11 @@ pub fn laboratories(input: &'static str) -> i32 {
     let (start, grid) = create_grid_and_start(input);
 
     let mut ans = 0;
-    let mut beams = AHashSet::new();
+    let mut beams = HashSet::new();
     beams.insert(start);
     for row in grid {
         let mut beams_to_be_added = vec![];
-        let mut beams_to_be_removed = AHashSet::new();
+        let mut beams_to_be_removed = HashSet::new();
         for (j, &val) in row.iter().enumerate() {
             if val && beams.contains(&j) {
                 beams_to_be_removed.insert(j);
@@ -521,7 +521,7 @@ pub fn laboratories(input: &'static str) -> i32 {
 pub fn laboratories2(input: &'static str) -> i64 {
     let (start, grid) = create_grid_and_start(input);
 
-    fn dpfn(grid: &[Vec<bool>], i: i32, j: i32, cache: &mut AHashMap<(i32, i32), i64>) -> i64 {
+    fn dpfn(grid: &[Vec<bool>], i: i32, j: i32, cache: &mut HashMap<(i32, i32), i64>) -> i64 {
         if i >= grid.len() as i32 {
             return 1;
         }
@@ -542,7 +542,7 @@ pub fn laboratories2(input: &'static str) -> i64 {
         best
     }
 
-    dpfn(&grid, 0, start as i32, &mut AHashMap::new())
+    dpfn(&grid, 0, start as i32, &mut HashMap::new())
 }
 
 pub struct UnionFind {
@@ -963,9 +963,9 @@ const fn str_to_u16(s: &str) -> u16 {
     ans
 }
 
-fn create_adj_list(input: &'static str) -> AHashMap<u16, SmallVec<[u16; 21]>> {
+fn create_adj_list(input: &'static str) -> HashMap<u16, SmallVec<[u16; 21]>> {
     // run without smallvec and get largest size to set as smallvec size
-    let mut adj_list: AHashMap<u16, SmallVec<[u16; 21]>> = AHashMap::new();
+    let mut adj_list: HashMap<u16, SmallVec<[u16; 21]>> = HashMap::new();
     for line in input.lines() {
         let mut lines_iter = line.split(':');
         let key = lines_iter.next().unwrap();
@@ -990,10 +990,10 @@ pub fn reactor(input: &'static str) -> i32 {
     assert!(!adj_list.is_empty());
 
     fn dp(
-        adj_list: &AHashMap<u16, SmallVec<[u16; 21]>>,
+        adj_list: &HashMap<u16, SmallVec<[u16; 21]>>,
         output: u16,
         val: u16,
-        cache: &mut AHashMap<u16, i32>,
+        cache: &mut HashMap<u16, i32>,
     ) -> i32 {
         if val == output {
             return 1;
@@ -1016,7 +1016,7 @@ pub fn reactor(input: &'static str) -> i32 {
         &adj_list,
         str_to_u16("out"),
         str_to_u16("you"),
-        &mut AHashMap::new(),
+        &mut HashMap::new(),
     )
 }
 
@@ -1027,14 +1027,14 @@ pub fn reactor2(input: &'static str) -> i64 {
 
     #[allow(clippy::too_many_arguments)]
     fn dp(
-        adj_list: &AHashMap<u16, SmallVec<[u16; 21]>>,
+        adj_list: &HashMap<u16, SmallVec<[u16; 21]>>,
         output: u16,
         v1: u16,
         v2: u16,
         val: u16,
         has_v1: bool,
         has_v2: bool,
-        cache: &mut AHashMap<(u16, bool, bool), i64>,
+        cache: &mut HashMap<(u16, bool, bool), i64>,
     ) -> i64 {
         if val == output {
             if has_v1 && has_v2 {
@@ -1073,7 +1073,7 @@ pub fn reactor2(input: &'static str) -> i64 {
         str_to_u16("svr"),
         false,
         false,
-        &mut AHashMap::new(),
+        &mut HashMap::new(),
     )
 }
 
@@ -1224,6 +1224,7 @@ fn main() {
     tracing_subscriber::fmt()
         .with_writer(non_blocking)
         .without_time()
+        .with_target(false)
         .init();
 
     info!("{}", christmas_tree_farm(include_str!("../inputs/d12.txt")));

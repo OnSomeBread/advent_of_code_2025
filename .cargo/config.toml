@@ -1,16 +1,8 @@
-#[unstable]
-#build-std = ["std", "panic_abort"]
-
 [build]
-rustflags = [
-    "-Ctarget-cpu=native",
-    "-Clink-arg=-fuse-ld=lld",
-    "-Zthreads=24",
-    "-Cforce-frame-pointers=no",
-    "-Cprefer-dynamic=no",
-    "-Cno-vectorize-loops",
-    "-Cno-prepopulate-passes",
-]
+rustflags = ["-Ctarget-cpu=native", "-Zthreads=24"]
+
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
 
 [alias]
 t = "test -- --test-threads=1 --no-capture"
